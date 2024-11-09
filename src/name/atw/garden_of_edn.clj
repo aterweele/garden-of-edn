@@ -10,8 +10,8 @@
       (f x))))
 
 (defn resource
-  ([n] (resource n nil))
-  ([n opts]
+  ([n] (resource {} n))
+  ([opts n]
    (-> n
        io/resource
        io/reader
@@ -19,5 +19,5 @@
        ((opening (partial edn/read opts))))))
 
 (defn delay-resource
-  ([n] (delay-resource n nil))
-  ([n opts] (delay (resource n opts))))
+  ([n] (delay-resource {} n))
+  ([opts n] (delay (resource opts n))))
