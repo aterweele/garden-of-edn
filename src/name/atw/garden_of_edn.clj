@@ -9,11 +9,15 @@
     (with-open [x closeable]
       (f x))))
 
-(defn resource [n]
-  (-> n
-      io/resource
-      io/reader
-      PushbackReader.
-      ((opening edn/read))))
+(defn resource
+  ([n] (resource n nil))
+  ([n opts]
+   (-> n
+       io/resource
+       io/reader
+       PushbackReader.
+       ((opening (partial edn/read opts))))))
 
-(defn delay-resource [n] (delay (resource n)))
+(defn delay-resource
+  ([n] (delay-resource n nil))
+  ([n opts] (delay (resource n opts))))
