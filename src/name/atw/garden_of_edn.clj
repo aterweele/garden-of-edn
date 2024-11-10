@@ -9,6 +9,19 @@
     (with-open [x closeable]
       (f x))))
 
+(defn file
+  ([n] (file {} n))
+  ([opts n]
+   (-> n
+       io/file
+       io/reader
+       PushbackReader.
+       ((opening (partial edn/read opts))))))
+
+(defn delay-file
+  ([n] (delay-file {} n))
+  ([opts n] (delay (file opts n))))
+
 (defn resource
   ([n] (resource {} n))
   ([opts n]

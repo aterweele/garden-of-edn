@@ -1,0 +1,66 @@
+* ~name.atw.garden-of-edn~
+Convenience utilities for EDN resources.
+** Installation
+Not on Clojars yet, use a Git dep with [[https://clojure.org/guides/deps_and_cli#_using_git_libraries][:git/sha]].
+** Motivation
+Opening an EDN resource requires some boilerplate and is easy to get
+wrong:
+
+#+begin_src clojure
+  user=> (import 'java.io.PushbackReader 
+                 'java.lang.management.ManagementFactory)
+  java.lang.management.ManagementFactory
+  user=> (require '[clojure.edn :as edn]
+                  '[clojure.java.io :as io])
+  nil
+  user=> (.getOpenFileDescriptorCount (ManagementFactory/getOperatingSystemMXBean))
+  21
+  user=> (->> "test/test.edn"     ;don't do this!
+              io/file
+              io/reader
+              PushbackReader.
+              edn/read)
+  {:id #uuid "3b10bf99-58f1-4849-95c6-7839c5f2c2fc"}
+  user=> (.getOpenFileDescriptorCount (ManagementFactory/getOperatingSystemMXBean))
+  22
+#+end_src
+
+This works, but note that it increases the number of open file
+descriptors because it fails to close the reader it constructs. Do
+this too much and you'll run out of file descriptors:
+
+#+begin_src clojure
+  user=> (dotimes [i 1e6]
+           (try
+             (->> "test/test.edn" ;don't do this!
+                  io/file
+                  io/reader
+                  PushbackReader.
+                  edn/read)
+             (catch Exception e
+               (println "failed after" i "iterations")
+               (throw e))))
+  failed after 22831 iterations
+  Execution error (FileNotFoundException) at java.io.FileInputStream/open0 (FileInputStream.java:-2).
+  test/test.edn (Too many open files)
+#+end_src
+
+The proper way to do this is to use [[https://clojure.github.io/clojure/clojure.core-api.html#clojure.core/with-open][with-open]], or a convenience
+function from this library:
+
+#+begin_src clojure
+  user=> (require '[name.atw.garden-of-edn :as garden])
+  nil
+  user=> (.getOpenFileDescriptorCount (ManagementFactory/getOperatingSystemMXBean))
+  22
+  user=> (garden/file "test/test.edn")
+  {:id #uuid "3b10bf99-58f1-4849-95c6-7839c5f2c2fc"}
+  user=> (.getOpenFileDescriptorCount (ManagementFactory/getOperatingSystemMXBean))
+  22
+#+end_src
+
+~name.atw.garden-of-edn~'s ~file~ and ~resource~ accept a string
+describing a path to a file or resource, respectively. They read the
+contents as EDN, and always close their file descriptor. ~delay-file~
+and ~delay-resource~ are much the same, but they yield a ~Delay~ that
+reads the EDN when derefed.
